@@ -109,6 +109,9 @@ POST /api/chat
 - **Responsive Design**: Works in narrow task pane
 - **Excel Context**: Sends selected range data to AI
 
+## 🌐 **Live App**
+**https://mavencat.github.io/frontend/taskpane.html**
+
 ## Resources
 
 - [Office Add-ins documentation](https://docs.microsoft.com/en-us/office/dev/add-ins/)
