@@ -14,32 +14,30 @@
 <body>
     <div id="app-body">
         <div id="app-header">
-            <h1>Excel Task Pane</h1>
-            <p>Simple Excel Add-in</p>
+            <h1>Excel AI Chat</h1>
+            <p>Ask questions about your Excel data</p>
         </div>
         
-        <div id="app-main">
-            <div class="section">
-                <h2>Basic Operations</h2>
-                
-                <button id="highlight-range" class="ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Highlight Selected Range</span>
-                </button>
-                
-                <button id="insert-text" class="ms-Button">
-                    <span class="ms-Button-label">Insert Sample Text</span>
-                </button>
-                
-                <button id="get-range-info" class="ms-Button">
-                    <span class="ms-Button-label">Get Range Info</span>
-                </button>
+        <div id="chat-container">
+            <div id="messages-container">
+                <div id="messages">
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            <p>Hello! I'm your Excel AI assistant. Ask me anything about your spreadsheet data, formulas, or analysis.</p>
+                        </div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
             </div>
             
-            <div class="section">
-                <h3>Output</h3>
-                <div id="output" class="output-area">
-                    Ready to interact with Excel...
+            <div id="input-container">
+                <div id="input-area">
+                    <input type="text" id="message-input" placeholder="Ask about your Excel data..." autocomplete="off">
+                    <button id="send-button" type="button">
+                        <span>Send</span>
+                    </button>
                 </div>
+                <div id="status" class="status-hidden"></div>
             </div>
         </div>
     </div>
