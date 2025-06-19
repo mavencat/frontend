@@ -2,10 +2,13 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-module.exports = {
-    entry: './src/taskpane/taskpane.js',
-    mode: 'development',
-    devtool: 'source-map',
+module.exports = (env, argv) => {
+    const isProduction = argv.mode === 'production';
+    
+    return {
+        entry: './src/taskpane/taskpane.js',
+        mode: isProduction ? 'production' : 'development',
+        devtool: isProduction ? 'source-map' : 'eval-source-map',
     resolve: {
         extensions: ['.js', '.html', '.css']
     },
@@ -28,6 +31,11 @@ module.exports = {
                 {
                     from: './manifest.xml',
                     to: './manifest.xml'
+                },
+                {
+                    from: './assets',
+                    to: './assets',
+                    noErrorOnMissing: true
                 }
             ]
         })
@@ -51,9 +59,11 @@ module.exports = {
             'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
         }
     },
-    output: {
-        filename: 'taskpane.js',
-        path: path.resolve(__dirname, 'dist'),
-        clean: true
-    }
+        output: {
+            filename: 'taskpane.js',
+            path: path.resolve(__dirname, 'dist'),
+            publicPath: isProduction ? '/frontend/' : '/',
+            clean: true
+        }
+    };
 };
