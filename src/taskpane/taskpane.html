@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Task Pane Add-in</title>
+    
+    <!-- Office JavaScript API -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="taskpane.css">
+</head>
+<body>
+    <div id="app-body">
+        <div id="app-header">
+            <h1>Excel Task Pane</h1>
+            <p>Simple Excel Add-in</p>
+        </div>
+        
+        <div id="app-main">
+            <div class="section">
+                <h2>Basic Operations</h2>
+                
+                <button id="highlight-range" class="ms-Button ms-Button--primary">
+                    <span class="ms-Button-label">Highlight Selected Range</span>
+                </button>
+                
+                <button id="insert-text" class="ms-Button">
+                    <span class="ms-Button-label">Insert Sample Text</span>
+                </button>
+                
+                <button id="get-range-info" class="ms-Button">
+                    <span class="ms-Button-label">Get Range Info</span>
+                </button>
+            </div>
+            
+            <div class="section">
+                <h3>Output</h3>
+                <div id="output" class="output-area">
+                    Ready to interact with Excel...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="taskpane.js"></script>
+</body>
+</html>
