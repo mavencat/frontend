@@ -11,6 +11,12 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Excel) {
         initializeChat();
         console.log("Office.js is ready for Excel - Chat interface initialized");
+        
+        // Check backend health on load
+        checkBackendHealth();
+        
+        // Set up periodic health checks (every 5 minutes)
+        setInterval(checkBackendHealth, 5 * 60 * 1000);
     } else {
         showError("This add-in is designed for Excel");
     }
@@ -172,14 +178,28 @@ function formatTime(date) {
     });
 }
 
+// Production backend configuration
+const API_CONFIG = {
+    BASE_URL: 'https://backend-ulfc334oda-ew.a.run.app',
+    ENDPOINTS: {
+        CHAT: '/chat',
+        HEALTH: '/health'
+    },
+    TIMEOUT: 30000 // 30 seconds timeout
+};
+
+// Build full URLs
+const API_URLS = {
+    chat: `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CHAT}`,
+    health: `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.HEALTH}`
+};
+
 /**
  * Get AI response from backend API
  * @param {string} userMessage - User's message
  * @returns {Promise<string>} AI response
  */
 async function getAIResponse(userMessage) {
-    // TODO: Replace with your actual backend API URL
-    const API_URL = 'http://localhost:8000/api/chat'; // Example backend URL
     
     try {
         // Get Excel context for AI
@@ -192,27 +212,63 @@ async function getAIResponse(userMessage) {
             timestamp: new Date().toISOString()
         };
         
-        // Make API call to backend
-        const response = await fetch(API_URL, {
+        console.log('Sending request to:', API_URLS.chat);
+        console.log('Payload:', payload);
+        
+        // Make API call with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+        
+        const response = await fetch(API_URLS.chat, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
         
+        clearTimeout(timeoutId);
+        
+        // Handle response
         if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
+            let errorMessage = `Server error (${response.status}): `;
+            
+            try {
+                const errorData = await response.json();
+                errorMessage += errorData.detail || 'Unknown error occurred';
+            } catch (e) {
+                errorMessage += `HTTP ${response.status} ${response.statusText}`;
+            }
+            
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
-        return data.response || 'Sorry, I didn\'t receive a proper response.';
+        console.log('Response received:', data);
+        
+        // Validate response format
+        if (!data.response) {
+            throw new Error('Invalid response format: missing response field');
+        }
+        
+        return data.response;
         
     } catch (error) {
         console.error('API Error:', error);
         
-        // Fallback to placeholder responses when API is not available
-        return getPlaceholderResponse(userMessage);
+        let errorMessage = 'Sorry, I encountered an error. ';
+        
+        if (error.name === 'AbortError') {
+            errorMessage += 'The request timed out. Please try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage += 'Unable to connect to the server. Please check your internet connection.';
+        } else {
+            errorMessage += error.message;
+        }
+        
+        throw new Error(errorMessage);
     }
 }
 
@@ -280,5 +336,50 @@ async function getExcelContext() {
     } catch (error) {
         console.error('Error getting Excel context:', error);
         return null;
+    }
+}
+
+/**
+ * Check backend health status
+ * @returns {Promise<boolean>} Health status
+ */
+async function checkBackendHealth() {
+    try {
+        console.log('Checking backend health...');
+        
+        const response = await fetch(API_URLS.health, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Health check failed: ${response.status}`);
+        }
+        
+        const health = await response.json();
+        console.log('Backend health check passed:', health);
+        
+        // Update UI to show backend status
+        const statusElement = document.getElementById('backendStatus');
+        if (statusElement) {
+            statusElement.textContent = '✅ Backend connected';
+            statusElement.className = 'status-healthy';
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Backend health check failed:', error);
+        
+        // Update UI to show backend status
+        const statusElement = document.getElementById('backendStatus');
+        if (statusElement) {
+            statusElement.textContent = '❌ Backend offline';
+            statusElement.className = 'status-error';
+        }
+        
+        return false;
     }
 }
