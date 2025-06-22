@@ -24,7 +24,7 @@ module.exports = (env, argv) => {
         new HtmlWebpackPlugin({
             template: './src/taskpane/taskpane.html',
             filename: 'taskpane.html',
-            inject: false
+            inject: 'body'
         }),
         new CopyWebpackPlugin({
             patterns: [
@@ -62,7 +62,7 @@ module.exports = (env, argv) => {
         output: {
             filename: 'taskpane.js',
             path: path.resolve(__dirname, 'dist'),
-            publicPath: '/',
+            publicPath: './',
             clean: true
         }
     };
