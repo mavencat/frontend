@@ -62,7 +62,7 @@ module.exports = (env, argv) => {
         output: {
             filename: 'taskpane.js',
             path: path.resolve(__dirname, 'dist'),
-            publicPath: isProduction ? '/frontend/' : '/',
+            publicPath: '/',
             clean: true
         }
     };
