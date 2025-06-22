@@ -1,6 +1,6 @@
 # Excel AI Chat Add-in
 
-A minimal Office.js Excel task pane add-in with AI chat interface built with vanilla JavaScript.
+A minimal Office.js Excel task pane add-in with AI chat interface built with vanilla JavaScript. Now deployed via GitHub Actions.
 
 ## Features
 
