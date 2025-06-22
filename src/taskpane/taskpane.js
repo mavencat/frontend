@@ -267,6 +267,8 @@ async function getAIResponse(userMessage) {
             errorMessage += 'The request timed out. Please try again.';
         } else if (error.message.includes('Failed to fetch')) {
             errorMessage += 'Unable to connect to the server. Please check your internet connection.';
+        } else if (error.message.includes('technical difficulties')) {
+            errorMessage = 'The AI service is temporarily unavailable. This may be due to API quota limits or configuration issues. Please try again later or contact support.';
         } else {
             errorMessage += error.message;
         }
@@ -337,8 +339,19 @@ async function getExcelContext() {
             };
         });
     } catch (error) {
-        console.error('Error getting Excel context:', error);
-        return null;
+        console.warn('Could not get Excel context, using default:', error);
+        // Return a default context structure instead of null
+        return {
+            selectedRange: {
+                address: "N/A",
+                values: [],
+                rowCount: 0,
+                columnCount: 0
+            },
+            worksheet: {
+                name: "Sheet1"
+            }
+        };
     }
 }
 
