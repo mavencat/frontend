@@ -1,5 +1,8 @@
 /* global console, document, Excel, Office */
 
+// Import CSS
+import './taskpane.css';
+
 // Chat state
 const chatState = {
     messages: [],
