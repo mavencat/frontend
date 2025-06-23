@@ -249,21 +249,14 @@ async function getExcelContext() {
             const selectedRange = context.workbook.getSelectedRange();
             const worksheet = context.workbook.worksheets.getActiveWorksheet();
             
-            selectedRange.load(['address', 'values', 'rowCount', 'columnCount']);
+            selectedRange.load(['address']);
             worksheet.load(['name']);
             
             await context.sync();
             
             return {
-                selectedRange: {
-                    address: selectedRange.address,
-                    values: selectedRange.values,
-                    rowCount: selectedRange.rowCount,
-                    columnCount: selectedRange.columnCount
-                },
-                worksheet: {
-                    name: worksheet.name
-                }
+                selectedRange: selectedRange.address,
+                worksheet: worksheet.name
             };
         });
     } catch (error) {
