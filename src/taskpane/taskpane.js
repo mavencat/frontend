@@ -14,12 +14,6 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Excel) {
         initializeChat();
         console.log("Office.js is ready for Excel - Chat interface initialized");
-        
-        // Check backend health on load
-        checkBackendHealth();
-        
-        // Set up periodic health checks (every 5 minutes)
-        setInterval(checkBackendHealth, 5 * 60 * 1000);
     } else {
         showError("This add-in is designed for Excel");
     }
@@ -137,7 +131,7 @@ function setLoadingState(isLoading) {
     
     if (isLoading) {
         status.className = 'status-typing';
-        status.innerHTML = '<span class="typing-indicator">AI is thinking</span>';
+        status.innerHTML = '<span class="typing-indicator">AI is thinking...</span>';
     } else {
         status.className = 'status-hidden';
         status.textContent = '';
@@ -181,21 +175,8 @@ function formatTime(date) {
     });
 }
 
-// Production backend configuration
-const API_CONFIG = {
-    BASE_URL: 'https://backend-ulfc334oda-ew.a.run.app',
-    ENDPOINTS: {
-        CHAT: '/chat',
-        HEALTH: '/health'
-    },
-    TIMEOUT: 30000 // 30 seconds timeout
-};
-
-// Build full URLs
-const API_URLS = {
-    chat: `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CHAT}`,
-    health: `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.HEALTH}`
-};
+// API configuration
+const API_URL = 'https://backend-ulfc334oda-ew.a.run.app/chat';
 
 /**
  * Get AI response from backend API
@@ -215,24 +196,17 @@ async function getAIResponse(userMessage) {
             timestamp: new Date().toISOString()
         };
         
-        console.log('Sending request to:', API_URLS.chat);
+        console.log('Sending request to:', API_URL);
         console.log('Payload:', payload);
         
-        // Make API call with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-        
-        const response = await fetch(API_URLS.chat, {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify(payload),
-            signal: controller.signal
+            body: JSON.stringify(payload)
         });
-        
-        clearTimeout(timeoutId);
         
         // Handle response
         if (!response.ok) {
@@ -260,56 +234,10 @@ async function getAIResponse(userMessage) {
         
     } catch (error) {
         console.error('API Error:', error);
-        
-        let errorMessage = 'Sorry, I encountered an error. ';
-        
-        if (error.name === 'AbortError') {
-            errorMessage += 'The request timed out. Please try again.';
-        } else if (error.message.includes('Failed to fetch')) {
-            errorMessage += 'Unable to connect to the server. Please check your internet connection.';
-        } else if (error.message.includes('technical difficulties')) {
-            errorMessage = 'The AI service is temporarily unavailable. This may be due to API quota limits or configuration issues. Please try again later or contact support.';
-        } else {
-            errorMessage += error.message;
-        }
-        
-        throw new Error(errorMessage);
+        throw new Error('Sorry, I encountered an error. Please try again.');
     }
 }
 
-/**
- * Get placeholder response (used when API is not available)
- * @param {string} userMessage - User's message
- * @returns {Promise<string>} Placeholder response
- */
-async function getPlaceholderResponse(userMessage) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-    
-    // Placeholder responses for testing
-    const responses = [
-        "I can help you analyze your Excel data. What specific information are you looking for?",
-        "Let me help you with that. Could you select the range of cells you'd like me to examine?",
-        "I understand you want to work with your spreadsheet data. What kind of analysis would be most helpful?",
-        "That's a great question! I can assist with formulas, data analysis, and insights from your Excel workbook.",
-        "I'm here to help with your Excel data. What would you like to know or accomplish?"
-    ];
-    
-    // Simple response selection based on keywords
-    const lowerMessage = userMessage.toLowerCase();
-    if (lowerMessage.includes('formula') || lowerMessage.includes('calculate')) {
-        return "I can help you create formulas! What calculation do you need to perform?";
-    }
-    if (lowerMessage.includes('chart') || lowerMessage.includes('graph')) {
-        return "Charts are great for visualizing data! What type of chart would work best for your data?";
-    }
-    if (lowerMessage.includes('data') || lowerMessage.includes('analyze')) {
-        return "I'd be happy to help analyze your data. Could you tell me more about what insights you're looking for?";
-    }
-    
-    // Random response for other messages
-    return responses[Math.floor(Math.random() * responses.length)];
-}
 
 /**
  * Get Excel context information (for future AI integration)
@@ -339,63 +267,8 @@ async function getExcelContext() {
             };
         });
     } catch (error) {
-        console.warn('Could not get Excel context, using default:', error);
-        // Return a default context structure instead of null
-        return {
-            selectedRange: {
-                address: "N/A",
-                values: [],
-                rowCount: 0,
-                columnCount: 0
-            },
-            worksheet: {
-                name: "Sheet1"
-            }
-        };
+        console.warn('Could not get Excel context:', error);
+        return null;
     }
 }
 
-/**
- * Check backend health status
- * @returns {Promise<boolean>} Health status
- */
-async function checkBackendHealth() {
-    try {
-        console.log('Checking backend health...');
-        
-        const response = await fetch(API_URLS.health, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Health check failed: ${response.status}`);
-        }
-        
-        const health = await response.json();
-        console.log('Backend health check passed:', health);
-        
-        // Update UI to show backend status
-        const statusElement = document.getElementById('backendStatus');
-        if (statusElement) {
-            statusElement.textContent = '✅ Backend connected';
-            statusElement.className = 'status-healthy';
-        }
-        
-        return true;
-        
-    } catch (error) {
-        console.error('Backend health check failed:', error);
-        
-        // Update UI to show backend status
-        const statusElement = document.getElementById('backendStatus');
-        if (statusElement) {
-            statusElement.textContent = '❌ Backend offline';
-            statusElement.className = 'status-error';
-        }
-        
-        return false;
-    }
-}
