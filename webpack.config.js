@@ -41,23 +41,9 @@ module.exports = (env, argv) => {
         })
     ],
     devServer: {
-        static: {
-            directory: path.join(__dirname, 'dist'),
-        },
-        compress: true,
+        static: path.join(__dirname, 'dist'),
         port: 3000,
-        server: {
-            type: 'https',
-            options: {
-                // Allow self-signed certificates
-            }
-        },
-        allowedHosts: 'all',
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-            'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
-        }
+        open: true
     },
         output: {
             filename: 'taskpane.js',

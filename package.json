@@ -14,7 +14,6 @@
   "devDependencies": {
     "copy-webpack-plugin": "^13.0.0",
     "css-loader": "^7.1.2",
-    "eslint": "^9.29.0",
     "html-webpack-plugin": "^5.6.3",
     "style-loader": "^4.0.0",
     "webpack": "^5.99.9",
@@ -22,7 +21,6 @@
     "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
-    "@microsoft/office-js": "^1.1.110",
-    "@types/office-js": "^1.0.513"
+    "@microsoft/office-js": "^1.1.110"
   }
 }
