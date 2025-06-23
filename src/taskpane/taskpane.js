@@ -20,13 +20,12 @@ Office.onReady((info) => {
 });
 
 /**
- * Initialize chat interface
+ * Initialize chat interface and workbook data
  */
-function initializeChat() {
+async function initializeChat() {
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
     
-    // Event listeners
     sendButton.addEventListener('click', handleSendMessage);
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -35,8 +34,19 @@ function initializeChat() {
         }
     });
     
-    // Focus input
-    messageInput.focus();
+    try {
+        setLoadingState(true, 'Initializing workbook data...');
+        const workbookData = await getFullWorkbookData();
+        const result = await sendWorkbookData(workbookData);
+        currentWorkbookName = workbookData.workbookName;
+        console.log('Workbook initialization complete:', result);
+    } catch (error) {
+        console.error('Workbook initialization failed:', error);
+        showError('Failed to initialize workbook data');
+    } finally {
+        setLoadingState(false);
+        messageInput.focus();
+    }
 }
 
 /**
@@ -117,10 +127,11 @@ function renderMessage(message) {
 }
 
 /**
- * Set loading state
+ * Set loading state with custom message
  * @param {boolean} isLoading - Loading state
+ * @param {string} message - Custom loading message
  */
-function setLoadingState(isLoading) {
+function setLoadingState(isLoading, message = 'AI is thinking...') {
     chatState.isLoading = isLoading;
     const sendButton = document.getElementById('send-button');
     const messageInput = document.getElementById('message-input');
@@ -131,7 +142,7 @@ function setLoadingState(isLoading) {
     
     if (isLoading) {
         status.className = 'status-typing';
-        status.innerHTML = '<span class="typing-indicator">AI is thinking...</span>';
+        status.innerHTML = `<span class="typing-indicator">${message}</span>`;
     } else {
         status.className = 'status-hidden';
         status.textContent = '';
@@ -176,7 +187,160 @@ function formatTime(date) {
 }
 
 // API configuration
-const API_URL = 'https://backend-ulfc334oda-ew.a.run.app/chat';
+const BASE_API_URL = 'https://backend-ulfc334oda-ew.a.run.app';
+const CONFIG_URL = `${BASE_API_URL}/config`;
+const INITIALIZE_URL = `${BASE_API_URL}/initialize`;
+const CHAT_URL = `${BASE_API_URL}/chat`;
+
+// Configuration and state
+let workbookConfig = null;
+let currentWorkbookName = null;
+
+/**
+ * Fetch workbook processing configuration from backend
+ */
+async function fetchWorkbookConfig() {
+    try {
+        const response = await fetch(CONFIG_URL);
+        if (!response.ok) {
+            throw new Error(`Config fetch failed: ${response.status}`);
+        }
+        workbookConfig = await response.json();
+        console.log('Workbook config loaded:', workbookConfig);
+        return workbookConfig;
+    } catch (error) {
+        console.error('Failed to fetch workbook config:', error);
+        workbookConfig = {
+            MAX_ROWS_PER_BATCH: 250,
+            MAX_TOTAL_ROWS: 2000,
+            MAX_TOTAL_COLS: 104
+        };
+        return workbookConfig;
+    }
+}
+
+/**
+ * Extract complete workbook data with row-based batching
+ */
+async function getFullWorkbookData() {
+    if (!workbookConfig) {
+        await fetchWorkbookConfig();
+    }
+    
+    return await Excel.run(async (context) => {
+        const workbook = context.workbook;
+        const worksheets = workbook.worksheets;
+        
+        workbook.load('name');
+        worksheets.load('items/name');
+        await context.sync();
+        
+        const workbookName = workbook.name || 'Untitled Workbook';
+        const allBatches = [];
+        
+        for (let worksheet of worksheets.items) {
+            const usedRange = worksheet.getUsedRange();
+            if (!usedRange) continue;
+            
+            usedRange.load(['address', 'rowCount', 'columnCount']);
+            await context.sync();
+            
+            if (usedRange.isNullObject) continue;
+            
+            if (usedRange.rowCount > workbookConfig.MAX_TOTAL_ROWS) {
+                console.warn(`Worksheet ${worksheet.name} exceeds row limit`);
+                continue;
+            }
+            
+            if (usedRange.columnCount > workbookConfig.MAX_TOTAL_COLS) {
+                console.warn(`Worksheet ${worksheet.name} exceeds column limit`);
+                continue;
+            }
+            
+            const worksheetBatches = await createWorksheetBatches(
+                worksheet, 
+                usedRange, 
+                workbookConfig.MAX_ROWS_PER_BATCH
+            );
+            
+            allBatches.push(...worksheetBatches);
+        }
+        
+        return {
+            workbookName: workbookName,
+            batches: allBatches,
+            totalWorksheets: worksheets.items.length
+        };
+    });
+}
+
+/**
+ * Create batches for a single worksheet
+ */
+async function createWorksheetBatches(worksheet, usedRange, maxRowsPerBatch) {
+    return await Excel.run(async (context) => {
+        const batches = [];
+        const totalRows = usedRange.rowCount;
+        const address = usedRange.address;
+        
+        const [startCell, endCell] = address.split(':');
+        const startRow = parseInt(startCell.match(/\d+/)[0]);
+        const startCol = startCell.match(/[A-Z]+/)[0];
+        const endCol = endCell.match(/[A-Z]+/)[0];
+        
+        for (let i = 0; i < totalRows; i += maxRowsPerBatch) {
+            const batchStartRow = startRow + i;
+            const batchEndRow = Math.min(startRow + i + maxRowsPerBatch - 1, startRow + totalRows - 1);
+            const batchAddress = `${startCol}${batchStartRow}:${endCol}${batchEndRow}`;
+            
+            const batchRange = worksheet.getRange(batchAddress);
+            batchRange.load(['values', 'formulas', 'address']);
+            await context.sync();
+            
+            batches.push({
+                worksheetName: worksheet.name,
+                data: {
+                    address: batchRange.address,
+                    values: batchRange.values,
+                    formulas: batchRange.formulas,
+                    batchIndex: Math.floor(i / maxRowsPerBatch),
+                    rowStart: batchStartRow,
+                    rowEnd: batchEndRow
+                }
+            });
+        }
+        
+        return batches;
+    });
+}
+
+/**
+ * Send workbook data to backend
+ */
+async function sendWorkbookData(workbookData) {
+    try {
+        const response = await fetch(INITIALIZE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(workbookData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Workbook initialization failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Workbook data sent successfully:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('Failed to send workbook data:', error);
+        throw error;
+    }
+}
 
 /**
  * Get AI response from backend API
@@ -193,13 +357,14 @@ async function getAIResponse(userMessage) {
         const payload = {
             message: userMessage,
             context: excelContext,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            workbookName: currentWorkbookName
         };
         
-        console.log('Sending request to:', API_URL);
+        console.log('Sending request to:', CHAT_URL);
         console.log('Payload:', payload);
         
-        const response = await fetch(API_URL, {
+        const response = await fetch(CHAT_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
