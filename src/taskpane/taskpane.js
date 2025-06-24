@@ -246,12 +246,10 @@ async function getWorksheetNames() {
     try {
         return await Excel.run(async (context) => {
             const worksheets = context.workbook.worksheets;
-            worksheets.load(['name', 'visibility']);
+            worksheets.load(['name']);
             await context.sync();
             
-            return worksheets.items
-                .filter(sheet => sheet.visibility === Excel.SheetVisibility.visible)
-                .map(sheet => ({ sheet_name: sheet.name }));
+            return worksheets.items.map(sheet => ({ sheet_name: sheet.name }));
         });
     } catch (error) {
         console.warn('Could not get worksheet names:', error);
