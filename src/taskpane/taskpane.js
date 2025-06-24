@@ -39,7 +39,6 @@ async function initializeChat() {
         const workbookName = await getSimpleWorkbookName();
         const simpleData = {
             workbookName: workbookName,
-            batches: [{ worksheetName: "Simple", data: { simple: true } }],
             totalWorksheets: 1
         };
         const result = await sendWorkbookData(simpleData);
@@ -215,11 +214,7 @@ async function fetchWorkbookConfig() {
         return workbookConfig;
     } catch (error) {
         console.error('Failed to fetch workbook config:', error);
-        workbookConfig = {
-            MAX_ROWS_PER_BATCH: 250,
-            MAX_TOTAL_ROWS: 2000,
-            MAX_TOTAL_COLS: 104
-        };
+        workbookConfig = {};
         return workbookConfig;
     }
 }
