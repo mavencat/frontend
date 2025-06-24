@@ -36,12 +36,19 @@ async function initializeChat() {
     
     try {
         setLoadingState(true, 'Initializing workbook data...');
+        
+        // Get workbook name and worksheet information
         const workbookName = await getSimpleWorkbookName();
-        const simpleData = {
+        const worksheetData = await getWorksheetNames();
+        
+        const workbookData = {
             workbookName: workbookName,
-            totalWorksheets: 1
+            totalWorksheets: worksheetData.length,
+            sheets: worksheetData
         };
-        const result = await sendWorkbookData(simpleData);
+        
+        console.log('Workbook data prepared:', workbookData);
+        const result = await sendWorkbookData(workbookData);
         currentFileId = result.file_id;
         console.log('Workbook initialization complete:', result);
     } catch (error) {
@@ -230,6 +237,26 @@ async function getSimpleWorkbookName() {
         
         return workbook.name || 'Untitled Workbook';
     });
+}
+
+/**
+ * Get worksheet names safely without complex data extraction
+ */
+async function getWorksheetNames() {
+    try {
+        return await Excel.run(async (context) => {
+            const worksheets = context.workbook.worksheets;
+            worksheets.load(['name', 'visibility']);
+            await context.sync();
+            
+            return worksheets.items
+                .filter(sheet => sheet.visibility === Excel.SheetVisibility.visible)
+                .map(sheet => ({ sheet_name: sheet.name }));
+        });
+    } catch (error) {
+        console.warn('Could not get worksheet names:', error);
+        return [];
+    }
 }
 
 
