@@ -36,8 +36,13 @@ async function initializeChat() {
     
     try {
         setLoadingState(true, 'Initializing workbook data...');
-        const workbookData = await getFullWorkbookData();
-        const result = await sendWorkbookData(workbookData);
+        const workbookName = await getSimpleWorkbookName();
+        const simpleData = {
+            workbookName: workbookName,
+            batches: [{ worksheetName: "Simple", data: { simple: true } }],
+            totalWorksheets: 1
+        };
+        const result = await sendWorkbookData(simpleData);
         currentFileId = result.file_id;
         console.log('Workbook initialization complete:', result);
     } catch (error) {
@@ -220,99 +225,18 @@ async function fetchWorkbookConfig() {
 }
 
 /**
- * Extract complete workbook data with row-based batching
+ * Get simple workbook name without complex data extraction
  */
-async function getFullWorkbookData() {
-    if (!workbookConfig) {
-        await fetchWorkbookConfig();
-    }
-    
+async function getSimpleWorkbookName() {
     return await Excel.run(async (context) => {
         const workbook = context.workbook;
-        const worksheets = workbook.worksheets;
-        
         workbook.load('name');
-        worksheets.load('items/name');
         await context.sync();
         
-        const workbookName = workbook.name || 'Untitled Workbook';
-        const allBatches = [];
-        
-        for (let worksheet of worksheets.items) {
-            const usedRange = worksheet.getUsedRange();
-            if (!usedRange) continue;
-            
-            usedRange.load(['address', 'rowCount', 'columnCount']);
-            await context.sync();
-            
-            if (usedRange.isNullObject) continue;
-            
-            if (usedRange.rowCount > workbookConfig.MAX_TOTAL_ROWS) {
-                console.warn(`Worksheet ${worksheet.name} exceeds row limit`);
-                continue;
-            }
-            
-            if (usedRange.columnCount > workbookConfig.MAX_TOTAL_COLS) {
-                console.warn(`Worksheet ${worksheet.name} exceeds column limit`);
-                continue;
-            }
-            
-            const worksheetBatches = await createWorksheetBatches(
-                worksheet, 
-                usedRange, 
-                workbookConfig.MAX_ROWS_PER_BATCH
-            );
-            
-            allBatches.push(...worksheetBatches);
-        }
-        
-        return {
-            workbookName: workbookName,
-            batches: allBatches,
-            totalWorksheets: worksheets.items.length
-        };
+        return workbook.name || 'Untitled Workbook';
     });
 }
 
-/**
- * Create batches for a single worksheet
- */
-async function createWorksheetBatches(worksheet, usedRange, maxRowsPerBatch) {
-    return await Excel.run(async (context) => {
-        const batches = [];
-        const totalRows = usedRange.rowCount;
-        const address = usedRange.address;
-        
-        const [startCell, endCell] = address.split(':');
-        const startRow = parseInt(startCell.match(/\d+/)[0]);
-        const startCol = startCell.match(/[A-Z]+/)[0];
-        const endCol = endCell.match(/[A-Z]+/)[0];
-        
-        for (let i = 0; i < totalRows; i += maxRowsPerBatch) {
-            const batchStartRow = startRow + i;
-            const batchEndRow = Math.min(startRow + i + maxRowsPerBatch - 1, startRow + totalRows - 1);
-            const batchAddress = `${startCol}${batchStartRow}:${endCol}${batchEndRow}`;
-            
-            const batchRange = worksheet.getRange(batchAddress);
-            batchRange.load(['values', 'formulas', 'address']);
-            await context.sync();
-            
-            batches.push({
-                worksheetName: worksheet.name,
-                data: {
-                    address: batchRange.address,
-                    values: batchRange.values,
-                    formulas: batchRange.formulas,
-                    batchIndex: Math.floor(i / maxRowsPerBatch),
-                    rowStart: batchStartRow,
-                    rowEnd: batchEndRow
-                }
-            });
-        }
-        
-        return batches;
-    });
-}
 
 /**
  * Send workbook data to backend
