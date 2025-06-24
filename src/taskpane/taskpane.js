@@ -38,7 +38,7 @@ async function initializeChat() {
         setLoadingState(true, 'Initializing workbook data...');
         const workbookData = await getFullWorkbookData();
         const result = await sendWorkbookData(workbookData);
-        currentWorkbookName = workbookData.workbookName;
+        currentFileId = result.file_id;
         console.log('Workbook initialization complete:', result);
     } catch (error) {
         console.error('Workbook initialization failed:', error);
@@ -194,7 +194,7 @@ const CHAT_URL = `${BASE_API_URL}/chat`;
 
 // Configuration and state
 let workbookConfig = null;
-let currentWorkbookName = null;
+let currentFileId = null;
 
 /**
  * Fetch workbook processing configuration from backend
@@ -358,7 +358,7 @@ async function getAIResponse(userMessage) {
             message: userMessage,
             context: excelContext,
             timestamp: new Date().toISOString(),
-            workbookName: currentWorkbookName
+            file_id: currentFileId
         };
         
         console.log('Sending request to:', CHAT_URL);
