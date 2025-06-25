@@ -41,6 +41,13 @@ async function initializeChat() {
         const workbookName = await getSimpleWorkbookName();
         const worksheetData = await getWorksheetNames();
         
+        // Immediately extract cell data after getting worksheet names
+        console.log('Starting cell data extraction...');
+        setLoadingState(true, 'Extracting cell data from workbook...');
+        
+        const cellData = await extractAllWorksheetData();
+        console.log(`Extracted ${cellData.length} cells from workbook`);
+        
         const workbookData = {
             workbookName: workbookName,
             totalWorksheets: worksheetData.length,
@@ -51,6 +58,30 @@ async function initializeChat() {
         const result = await sendWorkbookData(workbookData);
         currentFileId = result.file_id;
         console.log('Workbook initialization complete:', result);
+        
+        // Transmit the cell data we extracted
+        if (currentFileId && cellData.length > 0) {
+            console.log('Transmitting cell data to backend...');
+            setLoadingState(true, 'Transmitting cell data to backend...');
+            
+            try {
+                const cellDataResult = await transmitAllCellData(currentFileId, cellData, showProgress);
+                console.log('Cell data transmission completed:', cellDataResult);
+                
+                if (cellDataResult.success) {
+                    addMessage(`🎉 Workbook ready! Successfully extracted and transmitted ${cellDataResult.totalCells} cells from your Excel model. You can now chat about your data.`, 'ai');
+                } else {
+                    addMessage(`⚠️ Workbook partially ready. ${cellDataResult.successfulBatches}/${cellDataResult.totalBatches} batches transmitted successfully. Some data may be missing from analysis.`, 'ai');
+                }
+                
+            } catch (cellError) {
+                console.error('Cell data transmission failed:', cellError);
+                addMessage('❌ Workbook initialized, but cell data transmission failed. You can still chat, but I won\'t have access to your cell data.', 'ai');
+            }
+        } else if (cellData.length === 0) {
+            addMessage('📊 Workbook initialized. No cell data found to extract. Ready to chat!', 'ai');
+        }
+        
     } catch (error) {
         console.error('Workbook initialization failed:', error);
         showError('Failed to initialize workbook data');
@@ -161,6 +192,129 @@ function setLoadingState(isLoading, message = 'AI is thinking...') {
 }
 
 /**
+ * Show detailed progress for cell data extraction and transmission
+ * @param {Object} progress - Progress information
+ */
+function showProgress(progress) {
+    const status = document.getElementById('status');
+    
+    if (progress.stage === 'extraction_start') {
+        status.className = 'status-typing';
+        status.innerHTML = `<span class="typing-indicator">${progress.message}</span>`;
+        
+    } else if (progress.stage === 'extraction_complete') {
+        status.className = 'status-typing';
+        status.innerHTML = `<span class="typing-indicator">Extracted ${progress.totalCells} cells. Starting transmission...</span>`;
+        
+    } else if (progress.stage === 'preparation') {
+        status.className = 'status-typing';
+        status.innerHTML = `<span class="typing-indicator">Preparing ${progress.totalBatches} batches for ${progress.totalCells} cells...</span>`;
+        
+    } else if (progress.stage === 'transmission') {
+        const percentage = Math.round((progress.completedBatches / progress.totalBatches) * 100);
+        status.className = 'status-typing';
+        status.innerHTML = `<span class="typing-indicator">Sending batch ${progress.completedBatches + 1}/${progress.totalBatches} (${percentage}%) - Sheet: ${progress.currentSheet}</span>`;
+        
+    } else if (progress.stage === 'complete') {
+        const summary = progress.summary;
+        if (summary.success) {
+            status.className = 'status-success';
+            status.innerHTML = `<span>✓ Successfully transmitted ${summary.totalCells} cells in ${summary.totalBatches} batches</span>`;
+        } else {
+            status.className = 'status-warning';
+            status.innerHTML = `<span>⚠ Partial success: ${summary.successfulBatches}/${summary.totalBatches} batches sent. ${summary.failedBatches} failed.</span>`;
+        }
+        
+        // Hide status after a few seconds
+        setTimeout(() => {
+            status.className = 'status-hidden';
+            status.textContent = '';
+        }, 5000);
+        
+    } else if (progress.stage === 'error') {
+        status.className = 'status-error';
+        status.textContent = `Error: ${progress.error}`;
+        
+        // Hide error after a longer time
+        setTimeout(() => {
+            status.className = 'status-hidden';
+            status.textContent = '';
+        }, 10000);
+    }
+}
+
+/**
+ * Test cell data extraction and transmission
+ * This function can be called manually for testing
+ */
+async function testCellDataExtraction() {
+    try {
+        if (!currentFileId) {
+            showError('No file ID available. Please initialize workbook first.');
+            return;
+        }
+        
+        console.log('Starting manual cell data extraction test...');
+        
+        // Extract and transmit cell data with progress tracking
+        const result = await extractAndTransmitWorkbookData(currentFileId, showProgress);
+        
+        console.log('Manual cell data extraction test completed:', result);
+        
+        // Update extraction status
+        cellDataExtracted = result.success;
+        
+        if (result.success) {
+            addMessage(`🔄 Manual extraction completed successfully! Transmitted ${result.totalCells} cells.`, 'ai');
+        } else {
+            addMessage(`🔄 Manual extraction completed with issues. ${result.successfulBatches}/${result.totalBatches} batches successful.`, 'ai');
+        }
+        
+    } catch (error) {
+        console.error('Manual cell data extraction test failed:', error);
+        showError('Cell data extraction failed: ' + error.message);
+    }
+}
+
+/**
+ * Force re-extraction of cell data (ignores cellDataExtracted flag)
+ */
+async function forceReExtractCellData() {
+    try {
+        if (!currentFileId) {
+            showError('No file ID available. Please initialize workbook first.');
+            return;
+        }
+        
+        console.log('Starting forced cell data re-extraction...');
+        cellDataExtracted = false; // Reset flag to force re-extraction
+        
+        // Extract and transmit cell data with progress tracking
+        const result = await extractAndTransmitWorkbookData(currentFileId, showProgress);
+        
+        console.log('Forced cell data re-extraction completed:', result);
+        
+        // Update extraction status
+        cellDataExtracted = result.success;
+        
+        if (result.success) {
+            addMessage(`🔄 Re-extraction completed! Updated with ${result.totalCells} cells from your Excel model.`, 'ai');
+        } else {
+            addMessage(`🔄 Re-extraction partially completed. ${result.successfulBatches}/${result.totalBatches} batches successful.`, 'ai');
+        }
+        
+    } catch (error) {
+        console.error('Forced cell data re-extraction failed:', error);
+        showError('Forced re-extraction failed: ' + error.message);
+        cellDataExtracted = false; // Reset on failure
+    }
+}
+
+// Make functions globally available for debugging
+window.testCellDataExtraction = testCellDataExtraction;
+window.forceReExtractCellData = forceReExtractCellData;
+
+/**
  * Show error message
  * @param {string} message - Error message
  */
@@ -202,10 +356,12 @@ const BASE_API_URL = 'https://backend-962119591036.europe-west1.run.app';
 const CONFIG_URL = `${BASE_API_URL}/config`;
 const INITIALIZE_URL = `${BASE_API_URL}/initialize`;
 const CHAT_URL = `${BASE_API_URL}/chat`;
+const STORE_CELL_DATA_URL = `${BASE_API_URL}/store-cell-data`;
 
 // Configuration and state
 let workbookConfig = null;
 let currentFileId = null;
+let cellDataExtracted = false;
 
 /**
  * Fetch workbook processing configuration from backend
@@ -371,6 +527,347 @@ async function getExcelContext() {
     } catch (error) {
         console.warn('Could not get Excel context:', error);
         return null;
+    }
+}
+
+/**
+ * Extract cell data from a worksheet's used range
+ * @param {string} worksheetName - Name of the worksheet
+ * @returns {Promise<Array>} Array of cell data objects
+ */
+async function getUsedRangeData(worksheetName) {
+    try {
+        return await Excel.run(async (context) => {
+            const worksheet = context.workbook.worksheets.getItem(worksheetName);
+            const usedRange = worksheet.getUsedRange();
+            
+            if (!usedRange) {
+                console.log(`No used range found in worksheet: ${worksheetName}`);
+                return [];
+            }
+            
+            usedRange.load(['values', 'formulas', 'text', 'address', 'rowCount', 'columnCount']);
+            await context.sync();
+            
+            console.log(`Processing ${usedRange.rowCount}x${usedRange.columnCount} range in ${worksheetName}`);
+            
+            return convertRangeToCellData(usedRange, worksheetName);
+        });
+    } catch (error) {
+        console.error(`Error extracting data from worksheet ${worksheetName}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Convert Excel range data to structured cell data format
+ * @param {Object} range - Excel range object with loaded data
+ * @param {string} sheetName - Name of the sheet
+ * @returns {Array} Array of CellData objects
+ */
+function convertRangeToCellData(range, sheetName) {
+    const cellDataArray = [];
+    const values = range.values;
+    const formulas = range.formulas;
+    const text = range.text;
+    const rowCount = range.rowCount;
+    const columnCount = range.columnCount;
+    
+    for (let row = 0; row < rowCount; row++) {
+        for (let col = 0; col < columnCount; col++) {
+            const cellValue = values[row][col];
+            const cellFormula = formulas[row][col];
+            const cellText = text[row][col];
+            
+            // Skip empty cells to reduce data size
+            if (cellValue === null && cellFormula === null && !cellText) {
+                continue;
+            }
+            
+            const cellData = {
+                sheet_name: sheetName,
+                column: getColumnLetter(col),
+                row: row + 1, // Excel rows are 1-indexed
+                formula: cellFormula !== cellValue ? cellFormula : null,
+                value: cellValue,
+                display_text: cellText
+            };
+            
+            cellDataArray.push(cellData);
+        }
+    }
+    
+    console.log(`Extracted ${cellDataArray.length} non-empty cells from ${sheetName}`);
+    return cellDataArray;
+}
+
+/**
+ * Convert column index to Excel column letter
+ * @param {number} columnIndex - 0-based column index
+ * @returns {string} Column letter (A, B, C, ..., AA, AB, etc.)
+ */
+function getColumnLetter(columnIndex) {
+    let columnLetter = '';
+    while (columnIndex >= 0) {
+        columnLetter = String.fromCharCode(65 + (columnIndex % 26)) + columnLetter;
+        columnIndex = Math.floor(columnIndex / 26) - 1;
+    }
+    return columnLetter;
+}
+
+/**
+ * Extract cell data from all worksheets in the workbook
+ * @returns {Promise<Array>} Array of all cell data from all sheets
+ */
+async function extractAllWorksheetData() {
+    try {
+        const worksheetNames = await getWorksheetNames();
+        console.log(`Found ${worksheetNames.length} worksheets to process`);
+        
+        let allCellData = [];
+        
+        for (const sheet of worksheetNames) {
+            console.log(`Processing worksheet: ${sheet.sheet_name}`);
+            const sheetCellData = await getUsedRangeData(sheet.sheet_name);
+            allCellData = allCellData.concat(sheetCellData);
+        }
+        
+        console.log(`Total cells extracted: ${allCellData.length}`);
+        return allCellData;
+        
+    } catch (error) {
+        console.error('Error extracting worksheet data:', error);
+        throw error;
+    }
+}
+
+/**
+ * Batch cell data into manageable chunks for transmission
+ * @param {Array} cellData - Array of cell data objects
+ * @param {number} batchSize - Number of cells per batch
+ * @returns {Array} Array of batched cell data
+ */
+function batchCellData(cellData, batchSize = 1500) {
+    const batches = [];
+    const cellsBySheet = {};
+    
+    // Group cells by sheet
+    cellData.forEach(cell => {
+        if (!cellsBySheet[cell.sheet_name]) {
+            cellsBySheet[cell.sheet_name] = [];
+        }
+        cellsBySheet[cell.sheet_name].push(cell);
+    });
+    
+    // Create batches for each sheet
+    Object.keys(cellsBySheet).forEach(sheetName => {
+        const sheetCells = cellsBySheet[sheetName];
+        const totalCells = sheetCells.length;
+        
+        for (let i = 0; i < sheetCells.length; i += batchSize) {
+            const batchCells = sheetCells.slice(i, i + batchSize);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            
+            batches.push({
+                sheet_name: sheetName,
+                cells: batchCells,
+                total_cells: totalCells,
+                batch_number: batchNumber
+            });
+        }
+    });
+    
+    console.log(`Created ${batches.length} batches from ${cellData.length} cells`);
+    return batches;
+}
+
+/**
+ * Send a batch of cell data to the backend
+ * @param {string} fileId - File ID for the workbook
+ * @param {Array} batches - Array of batched cell data
+ * @param {boolean} isFinalBatch - Whether this is the final batch
+ * @returns {Promise<Object>} Response from server
+ */
+async function sendCellDataBatch(fileId, batches, isFinalBatch = false) {
+    try {
+        const payload = {
+            file_id: fileId,
+            batches: batches,
+            is_final_batch: isFinalBatch
+        };
+        
+        console.log(`Sending batch with ${batches.length} batches to backend`);
+        console.log(`Total cells in this transmission: ${batches.reduce((sum, batch) => sum + batch.cells.length, 0)}`);
+        
+        const response = await fetch(STORE_CELL_DATA_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            let errorMessage = `Server error (${response.status}): `;
+            try {
+                const errorData = await response.json();
+                errorMessage += errorData.detail || 'Unknown error occurred';
+            } catch (e) {
+                errorMessage += `HTTP ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+        }
+        
+        const result = await response.json();
+        console.log('Batch sent successfully:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('Error sending cell data batch:', error);
+        throw error;
+    }
+}
+
+/**
+ * Send all cell data to backend in managed batches
+ * @param {string} fileId - File ID for the workbook
+ * @param {Array} cellData - Array of all cell data
+ * @param {function} progressCallback - Optional callback for progress updates
+ * @returns {Promise<Object>} Summary of transmission results
+ */
+async function transmitAllCellData(fileId, cellData, progressCallback = null) {
+    try {
+        console.log(`Starting transmission of ${cellData.length} cells for file ${fileId}`);
+        
+        // Create batches
+        const batches = batchCellData(cellData, 1500);
+        const totalBatches = batches.length;
+        
+        if (progressCallback) {
+            progressCallback({
+                stage: 'preparation',
+                totalBatches: totalBatches,
+                completedBatches: 0,
+                currentSheet: null,
+                totalCells: cellData.length
+            });
+        }
+        
+        let successfulBatches = 0;
+        let failedBatches = 0;
+        const errors = [];
+        
+        // Send batches sequentially to avoid overwhelming the server
+        for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            const isFinalBatch = (i === batches.length - 1);
+            
+            try {
+                console.log(`Sending batch ${i + 1}/${totalBatches} for sheet: ${batch.sheet_name}`);
+                
+                if (progressCallback) {
+                    progressCallback({
+                        stage: 'transmission',
+                        totalBatches: totalBatches,
+                        completedBatches: i,
+                        currentSheet: batch.sheet_name,
+                        batchNumber: batch.batch_number,
+                        cellsInBatch: batch.cells.length
+                    });
+                }
+                
+                // Send single batch wrapped in array
+                await sendCellDataBatch(fileId, [batch], isFinalBatch);
+                successfulBatches++;
+                
+                // Small delay between batches to prevent overwhelming the server
+                if (!isFinalBatch) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+            } catch (error) {
+                console.error(`Failed to send batch ${i + 1}:`, error);
+                failedBatches++;
+                errors.push({
+                    batchNumber: i + 1,
+                    sheetName: batch.sheet_name,
+                    error: error.message
+                });
+                
+                // For now, continue with other batches even if one fails
+                // In production, you might want to implement retry logic
+            }
+        }
+        
+        const summary = {
+            totalCells: cellData.length,
+            totalBatches: totalBatches,
+            successfulBatches: successfulBatches,
+            failedBatches: failedBatches,
+            errors: errors,
+            success: failedBatches === 0
+        };
+        
+        if (progressCallback) {
+            progressCallback({
+                stage: 'complete',
+                summary: summary
+            });
+        }
+        
+        console.log('Cell data transmission complete:', summary);
+        return summary;
+        
+    } catch (error) {
+        console.error('Error in cell data transmission:', error);
+        throw error;
+    }
+}
+
+/**
+ * Extract and transmit all workbook cell data
+ * @param {string} fileId - File ID for the workbook
+ * @param {function} progressCallback - Optional callback for progress updates
+ * @returns {Promise<Object>} Transmission summary
+ */
+async function extractAndTransmitWorkbookData(fileId, progressCallback = null) {
+    try {
+        if (progressCallback) {
+            progressCallback({
+                stage: 'extraction_start',
+                message: 'Starting cell data extraction...'
+            });
+        }
+        
+        // Extract all cell data
+        const cellData = await extractAllWorksheetData();
+        
+        if (cellData.length === 0) {
+            console.log('No cell data found to transmit');
+            return { success: true, totalCells: 0, message: 'No data to transmit' };
+        }
+        
+        if (progressCallback) {
+            progressCallback({
+                stage: 'extraction_complete',
+                totalCells: cellData.length,
+                message: `Extracted ${cellData.length} cells, starting transmission...`
+            });
+        }
+        
+        // Transmit the data
+        return await transmitAllCellData(fileId, cellData, progressCallback);
+        
+    } catch (error) {
+        console.error('Error in extract and transmit:', error);
+        if (progressCallback) {
+            progressCallback({
+                stage: 'error',
+                error: error.message
+            });
+        }
+        throw error;
     }
 }
 
