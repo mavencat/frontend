@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel AI Chat</title>
+    
+    <!-- Office JavaScript API -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    
+    <!-- Task pane styles -->
+    <link rel="stylesheet" href="src/taskpane/taskpane.css">
+</head>
+<body>
+    <div id="app-body">
+        <div id="app-header">
+            <h1>Excel AI Chat</h1>
+            <p>Ask questions about your Excel data</p>
+        </div>
+        
+        <div id="chat-container">
+            <div id="messages-container">
+                <div id="messages">
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            <p>Hello! I'm your Excel AI assistant. I'll automatically extract your workbook data when you open this add-in. Ask me anything about your spreadsheet!</p>
+                        </div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="input-container">
+                <div id="input-area">
+                    <input type="text" id="message-input" placeholder="Ask about your Excel data..." autocomplete="off">
+                    <button id="send-button" type="button">
+                        <span>Send</span>
+                    </button>
+                </div>
+                <div id="status" class="status-hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task pane JavaScript with automatic cell data extraction -->
+    <script src="src/taskpane/taskpane.js"></script>
+</body>
+</html>
