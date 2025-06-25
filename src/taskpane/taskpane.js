@@ -62,24 +62,20 @@ async function initializeChat() {
         // Transmit the cell data we extracted
         if (currentFileId && cellData.length > 0) {
             console.log('Transmitting cell data to backend...');
-            setLoadingState(true, 'Transmitting cell data to backend...');
+            setLoadingState(true, 'Processing workbook data...');
             
             try {
-                const cellDataResult = await transmitAllCellData(currentFileId, cellData, showProgress);
+                const cellDataResult = await transmitAllCellData(currentFileId, cellData, null);
                 console.log('Cell data transmission completed:', cellDataResult);
                 
-                if (cellDataResult.success) {
-                    addMessage(`🎉 Workbook ready! Successfully extracted and transmitted ${cellDataResult.totalCells} cells from your Excel model. You can now chat about your data.`, 'ai');
-                } else {
-                    addMessage(`⚠️ Workbook partially ready. ${cellDataResult.successfulBatches}/${cellDataResult.totalBatches} batches transmitted successfully. Some data may be missing from analysis.`, 'ai');
-                }
+                addMessage('Ready to chat about your Excel data!', 'ai');
                 
             } catch (cellError) {
                 console.error('Cell data transmission failed:', cellError);
-                addMessage('❌ Workbook initialized, but cell data transmission failed. You can still chat, but I won\'t have access to your cell data.', 'ai');
+                addMessage('Workbook initialized. Ready to chat!', 'ai');
             }
-        } else if (cellData.length === 0) {
-            addMessage('📊 Workbook initialized. No cell data found to extract. Ready to chat!', 'ai');
+        } else {
+            addMessage('Ready to chat!', 'ai');
         }
         
     } catch (error) {
@@ -191,128 +187,7 @@ function setLoadingState(isLoading, message = 'AI is thinking...') {
     }
 }
 
-/**
- * Show detailed progress for cell data extraction and transmission
- * @param {Object} progress - Progress information
- */
-function showProgress(progress) {
-    const status = document.getElementById('status');
-    
-    if (progress.stage === 'extraction_start') {
-        status.className = 'status-typing';
-        status.innerHTML = `<span class="typing-indicator">${progress.message}</span>`;
-        
-    } else if (progress.stage === 'extraction_complete') {
-        status.className = 'status-typing';
-        status.innerHTML = `<span class="typing-indicator">Extracted ${progress.totalCells} cells. Starting transmission...</span>`;
-        
-    } else if (progress.stage === 'preparation') {
-        status.className = 'status-typing';
-        status.innerHTML = `<span class="typing-indicator">Preparing ${progress.totalBatches} batches for ${progress.totalCells} cells...</span>`;
-        
-    } else if (progress.stage === 'transmission') {
-        const percentage = Math.round((progress.completedBatches / progress.totalBatches) * 100);
-        status.className = 'status-typing';
-        status.innerHTML = `<span class="typing-indicator">Sending batch ${progress.completedBatches + 1}/${progress.totalBatches} (${percentage}%) - Sheet: ${progress.currentSheet}</span>`;
-        
-    } else if (progress.stage === 'complete') {
-        const summary = progress.summary;
-        if (summary.success) {
-            status.className = 'status-success';
-            status.innerHTML = `<span>✓ Successfully transmitted ${summary.totalCells} cells in ${summary.totalBatches} batches</span>`;
-        } else {
-            status.className = 'status-warning';
-            status.innerHTML = `<span>⚠ Partial success: ${summary.successfulBatches}/${summary.totalBatches} batches sent. ${summary.failedBatches} failed.</span>`;
-        }
-        
-        // Hide status after a few seconds
-        setTimeout(() => {
-            status.className = 'status-hidden';
-            status.textContent = '';
-        }, 5000);
-        
-    } else if (progress.stage === 'error') {
-        status.className = 'status-error';
-        status.textContent = `Error: ${progress.error}`;
-        
-        // Hide error after a longer time
-        setTimeout(() => {
-            status.className = 'status-hidden';
-            status.textContent = '';
-        }, 10000);
-    }
-}
 
-/**
- * Test cell data extraction and transmission
- * This function can be called manually for testing
- */
-async function testCellDataExtraction() {
-    try {
-        if (!currentFileId) {
-            showError('No file ID available. Please initialize workbook first.');
-            return;
-        }
-        
-        console.log('Starting manual cell data extraction test...');
-        
-        // Extract and transmit cell data with progress tracking
-        const result = await extractAndTransmitWorkbookData(currentFileId, showProgress);
-        
-        console.log('Manual cell data extraction test completed:', result);
-        
-        // Update extraction status
-        cellDataExtracted = result.success;
-        
-        if (result.success) {
-            addMessage(`🔄 Manual extraction completed successfully! Transmitted ${result.totalCells} cells.`, 'ai');
-        } else {
-            addMessage(`🔄 Manual extraction completed with issues. ${result.successfulBatches}/${result.totalBatches} batches successful.`, 'ai');
-        }
-        
-    } catch (error) {
-        console.error('Manual cell data extraction test failed:', error);
-        showError('Cell data extraction failed: ' + error.message);
-    }
-}
-
-/**
- * Force re-extraction of cell data (ignores cellDataExtracted flag)
- */
-async function forceReExtractCellData() {
-    try {
-        if (!currentFileId) {
-            showError('No file ID available. Please initialize workbook first.');
-            return;
-        }
-        
-        console.log('Starting forced cell data re-extraction...');
-        cellDataExtracted = false; // Reset flag to force re-extraction
-        
-        // Extract and transmit cell data with progress tracking
-        const result = await extractAndTransmitWorkbookData(currentFileId, showProgress);
-        
-        console.log('Forced cell data re-extraction completed:', result);
-        
-        // Update extraction status
-        cellDataExtracted = result.success;
-        
-        if (result.success) {
-            addMessage(`🔄 Re-extraction completed! Updated with ${result.totalCells} cells from your Excel model.`, 'ai');
-        } else {
-            addMessage(`🔄 Re-extraction partially completed. ${result.successfulBatches}/${result.totalBatches} batches successful.`, 'ai');
-        }
-        
-    } catch (error) {
-        console.error('Forced cell data re-extraction failed:', error);
-        showError('Forced re-extraction failed: ' + error.message);
-        cellDataExtracted = false; // Reset on failure
-    }
-}
-
-// Make functions globally available for debugging
-window.testCellDataExtraction = testCellDataExtraction;
-window.forceReExtractCellData = forceReExtractCellData;
 
 /**
  * Show error message
@@ -361,7 +236,6 @@ const STORE_CELL_DATA_URL = `${BASE_API_URL}/store-cell-data`;
 // Configuration and state
 let workbookConfig = null;
 let currentFileId = null;
-let cellDataExtracted = false;
 
 /**
  * Fetch workbook processing configuration from backend
