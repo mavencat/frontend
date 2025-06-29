@@ -227,7 +227,7 @@ function formatTime(date) {
 }
 
 // API configuration
-const BASE_API_URL = 'https://your-ngrok-url.ngrok.io';
+const BASE_API_URL = 'https://be53-193-164-23-49.ngrok-free.app';
 const CONFIG_URL = `${BASE_API_URL}/config`;
 const INITIALIZE_URL = `${BASE_API_URL}/initialize`;
 const CHAT_URL = `${BASE_API_URL}/chat`;
