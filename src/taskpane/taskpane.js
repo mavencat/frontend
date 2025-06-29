@@ -227,7 +227,7 @@ function formatTime(date) {
 }
 
 // API configuration
-const BASE_API_URL = 'https://backend-962119591036.europe-west1.run.app';
+const BASE_API_URL = 'https://your-ngrok-url.ngrok.io';
 const CONFIG_URL = `${BASE_API_URL}/config`;
 const INITIALIZE_URL = `${BASE_API_URL}/initialize`;
 const CHAT_URL = `${BASE_API_URL}/chat`;
