@@ -68,7 +68,7 @@ async function initializeChat() {
                 const cellDataResult = await transmitAllCellData(currentFileId, cellData, null);
                 console.log('Cell data transmission completed:', cellDataResult);
                 
-                addMessage('Ready to chat about your Excel data!', 'ai');
+                addMessage('Ready to chat about your data!', 'ai');
                 
             } catch (cellError) {
                 console.error('Cell data transmission failed:', cellError);
