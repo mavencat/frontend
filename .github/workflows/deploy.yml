@@ -31,6 +31,8 @@ jobs:
       
     - name: Build for production
       run: npm run build
+      env:
+        BASE_API_URL: https://backend-962119591036.europe-west1.run.app
       
     - name: Setup Pages
       uses: actions/configure-pages@v5

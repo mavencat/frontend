@@ -1,9 +1,12 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
+    
+    const apiUrl = process.env.BASE_API_URL || 'https://backend-962119591036.europe-west1.run.app';
     
     return {
         entry: './src/taskpane/taskpane.js',
@@ -21,6 +24,9 @@ module.exports = (env, argv) => {
         ]
     },
     plugins: [
+        new webpack.DefinePlugin({
+            'process.env.BASE_API_URL': JSON.stringify(apiUrl)
+        }),
         new HtmlWebpackPlugin({
             template: './src/taskpane/taskpane.html',
             filename: 'taskpane.html',
