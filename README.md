@@ -1,4 +1,4 @@
-# Excel AI Chat Add-in
+# Axel Add-in
 
 Simple Office.js Excel task pane with AI chat interface.
 

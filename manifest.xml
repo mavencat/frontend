@@ -10,7 +10,7 @@
   <Version>1.0.0</Version>
   <ProviderName>Your Company</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Excel AI Chat" />
+  <DisplayName DefaultValue="Axel" />
   <Description DefaultValue="AI chat interface for Excel data analysis" />
   <IconUrl DefaultValue="https://mavencat.github.io/frontend/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://mavencat.github.io/frontend/assets/icon-64.png"/>
