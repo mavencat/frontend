@@ -120,7 +120,7 @@
       
       <!-- ShortStrings max characters==125. -->
       <bt:ShortStrings>
-        <bt:String id="GroupLabel" DefaultValue="Excel Task Pane"/>
+        <bt:String id="GroupLabel" DefaultValue="Axel"/>
         <bt:String id="TaskpaneButton.Label" DefaultValue="Show Taskpane"/>
       </bt:ShortStrings>
       
