@@ -5,8 +5,9 @@ const webpack = require('webpack');
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
+    const isStaging = process.env.NODE_ENV === 'staging';
     
-    const apiUrl = process.env.BASE_API_URL || 'https://backend-962119591036.europe-west1.run.app';
+    const apiUrl = process.env.BASE_API_URL || (isStaging ? 'https://e068-212-161-100-196.ngrok-free.app' : 'https://backend-962119591036.europe-west1.run.app');
     
     return {
         entry: './src/taskpane/taskpane.js',
@@ -35,7 +36,7 @@ module.exports = (env, argv) => {
         new CopyWebpackPlugin({
             patterns: [
                 {
-                    from: './manifest.xml',
+                    from: isStaging ? './manifest-staging.xml' : './manifest.xml',
                     to: './manifest.xml'
                 },
                 {
