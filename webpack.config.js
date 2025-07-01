@@ -6,7 +6,7 @@ const webpack = require('webpack');
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
     
-    const apiUrl = process.env.BASE_API_URL || 'https://e068-212-161-100-196.ngrok-free.app';
+    const apiUrl = process.env.BASE_API_URL || 'https://backend-962119591036.europe-west1.run.app';
     
     return {
         entry: './src/taskpane/taskpane.js',
