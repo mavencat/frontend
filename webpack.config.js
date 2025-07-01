@@ -7,7 +7,7 @@ module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
     
     // Hardcoded staging backend URL - no environment variable complexity
-    const apiUrl = 'https://e068-212-161-100-196.ngrok-free.app';
+    const apiUrl = 'https://8429-185-237-61-51.ngrok-free.app';
     
     return {
         entry: './src/taskpane/taskpane.js',
