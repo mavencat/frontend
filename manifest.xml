@@ -10,13 +10,13 @@
   <Version>1.0.0</Version>
   <ProviderName>Your Company</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Axel" />
-  <Description DefaultValue="AI chat interface for Excel data analysis" />
-  <IconUrl DefaultValue="https://mavencat.github.io/frontend/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://mavencat.github.io/frontend/assets/icon-64.png"/>
-  <SupportUrl DefaultValue="https://mavencat.github.io/frontend" />
+  <DisplayName DefaultValue="Axel (Staging)" />
+  <Description DefaultValue="AI chat interface for Excel data analysis - Staging Version" />
+  <IconUrl DefaultValue="https://frontend-99q.pages.dev/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://frontend-99q.pages.dev/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://frontend-99q.pages.dev" />
   <AppDomains>
-    <AppDomain>https://mavencat.github.io</AppDomain>
+    <AppDomain>https://frontend-99q.pages.dev</AppDomain>
   </AppDomains>
   
   <!-- End Basic Settings. -->
@@ -31,7 +31,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://mavencat.github.io/frontend/taskpane.html"/>
+    <SourceLocation DefaultValue="https://frontend-99q.pages.dev/taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <!-- End TaskPane Mode integration.  -->
@@ -109,13 +109,13 @@
     <!-- You can use resources across hosts and form factors. -->
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://mavencat.github.io/frontend/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://mavencat.github.io/frontend/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://mavencat.github.io/frontend/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://frontend-99q.pages.dev/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://frontend-99q.pages.dev/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://frontend-99q.pages.dev/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://mavencat.github.io/frontend/taskpane.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://mavencat.github.io/frontend/taskpane.html"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://frontend-99q.pages.dev/taskpane.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://frontend-99q.pages.dev/taskpane.html"/>
       </bt:Urls>
       
       <!-- ShortStrings max characters==125. -->
