@@ -1,7 +1,28 @@
-/* global console, document, Excel, Office */
+/* global console, document, Excel, Office, Sentry */
 
 // Import CSS
 import './taskpane.css';
+
+// Initialize Sentry
+if (typeof Sentry !== 'undefined') {
+    Sentry.init({
+        environment: 'production',
+        beforeSend: (event) => {
+            if (event.exception) {
+                const error = event.exception.values[0];
+                if (error && error.stacktrace) {
+                    console.log('Sentry capturing error:', error.type, error.value);
+                }
+            }
+            return event;
+        }
+    });
+    
+    Sentry.setContext('application', {
+        name: 'Axel Excel Add-in',
+        version: '1.0.0'
+    });
+}
 
 // Chat state
 const chatState = {
@@ -12,8 +33,32 @@ const chatState = {
 // Initialize when Office.js is ready
 Office.onReady((info) => {
     if (info.host === Office.HostType.Excel) {
+        if (typeof Sentry !== 'undefined') {
+            Sentry.setUser({
+                id: 'excel-user-' + Date.now(),
+                segment: 'excel-users'
+            });
+            
+            Sentry.setContext('excel', {
+                host: info.host,
+                platform: info.platform
+            });
+        }
+        
         initializeChat();
         console.log("Office.js is ready for Excel - Chat interface initialized");
+        
+        // Test Sentry integration (remove after verification)
+        if (typeof Sentry !== 'undefined') {
+            console.log('Sentry is available:', Sentry);
+            setTimeout(() => {
+                console.log('Sending test message to Sentry...');
+                Sentry.captureMessage('Axel Excel Add-in initialized successfully', 'info');
+                console.log('Test message sent to Sentry');
+            }, 2000);
+        } else {
+            console.log('Sentry is not available');
+        }
     } else {
         showError("This add-in is designed for Excel");
     }
@@ -54,6 +99,14 @@ async function initializeChat() {
             sheets: worksheetData
         };
         
+        if (typeof Sentry !== 'undefined') {
+            Sentry.setContext('workbook', {
+                name: workbookName,
+                worksheetCount: worksheetData.length,
+                sheets: worksheetData.map(s => s.sheet_name)
+            });
+        }
+        
         console.log('Workbook data prepared:', workbookData);
         const result = await sendWorkbookData(workbookData);
         currentFileId = result.file_id;
@@ -80,6 +133,12 @@ async function initializeChat() {
         
     } catch (error) {
         console.error('Workbook initialization failed:', error);
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { function: 'initializeChat' },
+                extra: { stage: 'workbook_initialization' }
+            });
+        }
         showError('Failed to initialize workbook data');
     } finally {
         setLoadingState(false);
@@ -112,6 +171,12 @@ async function handleSendMessage() {
     } catch (error) {
         addMessage('Sorry, I encountered an error. Please try again.', 'ai');
         console.error('Error getting AI response:', error);
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { function: 'handleSendMessage' },
+                extra: { userMessage: message }
+            });
+        }
     } finally {
         setLoadingState(false);
         messageInput.focus();
@@ -312,6 +377,12 @@ async function sendWorkbookData(workbookData) {
         
     } catch (error) {
         console.error('Failed to send workbook data:', error);
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { function: 'sendWorkbookData' },
+                extra: { workbookData }
+            });
+        }
         throw error;
     }
 }
@@ -373,6 +444,16 @@ async function getAIResponse(userMessage) {
         
     } catch (error) {
         console.error('API Error:', error);
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { function: 'getAIResponse' },
+                extra: { 
+                    userMessage: userMessage,
+                    apiUrl: CHAT_URL,
+                    fileId: currentFileId
+                }
+            });
+        }
         throw new Error('Sorry, I encountered an error. Please try again.');
     }
 }
@@ -599,6 +680,16 @@ async function sendCellDataBatch(fileId, batches, isFinalBatch = false) {
         
     } catch (error) {
         console.error('Error sending cell data batch:', error);
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { function: 'sendCellDataBatch' },
+                extra: { 
+                    fileId,
+                    batchCount: batches.length,
+                    isFinalBatch
+                }
+            });
+        }
         throw error;
     }
 }

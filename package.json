@@ -7,12 +7,15 @@
     "build": "webpack --mode production",
     "build:staging": "webpack --mode production",
     "start": "webpack serve --mode development",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sentry:info": "sentry-cli info",
+    "sentry:events": "sentry-cli events list --org me-zmn"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@sentry/cli": "^2.46.0",
     "copy-webpack-plugin": "^13.0.0",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.3",
