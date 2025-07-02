@@ -35,55 +35,36 @@ async function initializeChat() {
     });
     
     try {
-        setLoadingState(true, 'Initializing workbook data...');
+        setLoadingState(true, 'Initializing workbook...');
         
-        // Get workbook name and worksheet information
         const workbookName = await getSimpleWorkbookName();
-        const worksheetData = await getWorksheetNames();
+        const worksheets = await getWorksheetNames(); // This just gets names
         
-        // Immediately extract cell data after getting worksheet names
-        console.log('Starting cell data extraction...');
-        setLoadingState(true, 'Extracting cell data from workbook...');
-        
-        const cellData = await extractAllWorksheetData();
-        console.log(`Extracted ${cellData.length} cells from workbook`);
-        
+        setLoadingState(true, 'Extracting data from worksheets...');
+
+        // Concurrently extract CSV data from all sheets
+        const sheetDataPromises = worksheets.map(sheet => extractSheetDataAsCsv(sheet.sheet_name));
+        const sheetsWithCsv = await Promise.all(sheetDataPromises);
+
         const workbookData = {
             workbookName: workbookName,
-            totalWorksheets: worksheetData.length,
-            sheets: worksheetData
+            totalWorksheets: worksheets.length,
+            sheets: sheetsWithCsv // This now includes the CSV data
         };
         
-        console.log('Workbook data prepared:', workbookData);
-        const result = await sendWorkbookData(workbookData);
+        console.log('Workbook data with CSVs prepared:', workbookData);
+        const result = await sendWorkbookData(workbookData); // Updated sendWorkbookData call
         currentFileId = result.file_id;
         console.log('Workbook initialization complete:', result);
-        
-        // Transmit the cell data we extracted
-        if (currentFileId && cellData.length > 0) {
-            console.log('Transmitting cell data to backend...');
-            setLoadingState(true, 'Processing workbook data...');
-            
-            try {
-                const cellDataResult = await transmitAllCellData(currentFileId, cellData, null);
-                console.log('Cell data transmission completed:', cellDataResult);
-                
-                addMessage('Ready to chat about your data!', 'ai');
-                
-            } catch (cellError) {
-                console.error('Cell data transmission failed:', cellError);
-                addMessage('Workbook initialized. Ready to chat!', 'ai');
-            }
-        } else {
-            addMessage('Ready to chat!', 'ai');
-        }
+
+        addMessage('Ready to chat about your data!', 'ai');
         
     } catch (error) {
         console.error('Workbook initialization failed:', error);
         showError('Failed to initialize workbook data');
     } finally {
         setLoadingState(false);
-        messageInput.focus();
+        document.getElementById('message-input').focus();
     }
 }
 
@@ -405,6 +386,36 @@ async function getExcelContext() {
 }
 
 /**
+ * Extracts the used range data from a worksheet and returns it as CSV strings.
+ * @param {string} worksheetName - The name of the worksheet.
+ * @returns {Promise<Object>} An object containing sheet_name, values_csv, and formulas_csv.
+ */
+async function extractSheetDataAsCsv(worksheetName) {
+    try {
+        return await Excel.run(async (context) => {
+            const worksheet = context.workbook.worksheets.getItem(worksheetName);
+            const usedRange = worksheet.getUsedRange();
+            usedRange.load(['values', 'formulas']);
+            await context.sync();
+
+            return {
+                sheet_name: worksheetName,
+                values_csv: arrayToCsv(usedRange.values),
+                formulas_csv: arrayToCsv(usedRange.formulas)
+            };
+        });
+    } catch (error) {
+        console.error(`Error extracting CSV data from worksheet ${worksheetName}:`, error);
+        // Return empty strings on error to avoid blocking the process
+        return {
+            sheet_name: worksheetName,
+            values_csv: '',
+            formulas_csv: ''
+        };
+    }
+}
+
+/**
  * Extract cell data from a worksheet's used range
  * @param {string} worksheetName - Name of the worksheet
  * @returns {Promise<Array>} Array of cell data objects
@@ -473,6 +484,23 @@ function convertRangeToCellData(range, sheetName) {
     
     console.log(`Extracted ${cellDataArray.length} non-empty cells from ${sheetName}`);
     return cellDataArray;
+}
+
+/**
+ * Converts a 2D array into a CSV string.
+ * @param {Array<Array<any>>} data - The 2D array to convert.
+ * @returns {string} The resulting CSV string.
+ */
+function arrayToCsv(data) {
+    return data.map(row => 
+        row.map(cell => {
+            const stringCell = cell === null || cell === undefined ? '' : String(cell);
+            if (stringCell.includes(',') || stringCell.includes('"') || stringCell.includes('\n')) {
+                return `"${stringCell.replace(/"/g, '""')}"`;
+            }
+            return stringCell;
+        }).join(',')
+    ).join('\n');
 }
 
 /**
