@@ -57,6 +57,11 @@ async function initializeChat() {
         currentFileId = result.file_id;
         console.log('Workbook initialization complete:', result);
 
+        // Now transmit detailed cell data for analysis
+        setLoadingState(true, 'Transmitting cell data for analysis...');
+        await extractAndTransmitWorkbookData(currentFileId);
+        console.log('Cell data transmission complete');
+
         addMessage('Ready to chat about your data!', 'ai');
         
     } catch (error) {
